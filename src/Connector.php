@@ -13,10 +13,24 @@ class Connector implements ConnectorInterface
     private $loop;
     private $resolver;
 
-    public function __construct(LoopInterface $loop, Resolver $resolver)
+    public function __construct(LoopInterface $loop, Resolver $resolver = null)
     {
         $this->loop = $loop;
         $this->resolver = $resolver;
+    }
+
+    public function setDnsResolver(Resolver $resolver)
+    {
+        $this->resolver = $resolver;
+    }
+
+    public function getDnsResolver()
+    {
+        if (!$this->resolver instanceof Resolver) {
+            throw new \RuntimeException('DNS Resolver is not set.');
+        }
+
+        return $this->resolver;
     }
 
     public function create($host, $port)
@@ -97,6 +111,6 @@ class Connector implements ConnectorInterface
             return Promise\resolve($host);
         }
 
-        return $this->resolver->resolve($host);
+        return $this->getDnsResolver()->resolve($host);
     }
 }
