@@ -18,8 +18,14 @@ class SecureConnector implements ConnectorInterface
 
     public function create($host, $port)
     {
-        return $this->connector->create($host, $port)->then(function (Stream $stream) {
-            // (unencrypted) connection succeeded => try to enable encryption
+        return $this->connector->create($host, $port)->then(function (Stream $stream) use($host) {
+            // (unencrypted) connection succeeded
+
+            // since DNS is resolved before creating the socket, PHP expects the cert name to match the resolved IP
+            // instead of the DNS name, so tell it to expect the name instead
+            stream_context_set_option($stream->stream, 'ssl', 'peer_name', $host);
+
+            // try to enable encryption
             return $this->streamEncryption->enable($stream)->then(null, function ($error) use ($stream) {
                 // establishing encryption failed => close invalid connection and return error
                 $stream->close();
