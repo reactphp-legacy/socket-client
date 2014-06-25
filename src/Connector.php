@@ -19,24 +19,27 @@ class Connector implements ConnectorInterface
         $this->resolver = $resolver;
     }
 
-    public function create($host, $port)
+    public function create($address)
     {
+        $parts = $this->splitSocketAddress($address);
+
         return $this
-            ->resolveHostname($host)
-            ->then(function ($address) use ($port) {
-                return $this->createSocketForAddress($address, $port);
+            ->resolveHostname($parts['host'])
+            ->then(function($host) use ($parts) {
+                $parts['host'] = $host;
+                $address = $this->joinSocketAddress($parts);
+
+                return $this->createSocketForAddress($address);
             });
     }
 
-    public function createSocketForAddress($address, $port)
+    public function createSocketForAddress($address)
     {
-        $url = $this->getSocketUrl($address, $port);
-
-        $socket = stream_socket_client($url, $errno, $errstr, 0, STREAM_CLIENT_CONNECT | STREAM_CLIENT_ASYNC_CONNECT);
+        $socket = stream_socket_client($address, $errno, $errstr, 0, STREAM_CLIENT_CONNECT | STREAM_CLIENT_ASYNC_CONNECT);
 
         if (!$socket) {
             return Promise\reject(new \RuntimeException(
-                sprintf("connection to %s:%d failed: %s", $address, $port, $errstr),
+                sprintf("connection to %s failed: %s", $address, $errstr),
                 $errno
             ));
         }
@@ -82,13 +85,56 @@ class Connector implements ConnectorInterface
         return new Stream($socket, $this->loop);
     }
 
-    protected function getSocketUrl($host, $port)
+    protected function splitSocketAddress($address)
     {
-        if (strpos($host, ':') !== false) {
-            // enclose IPv6 addresses in square brackets before appending port
-            $host = '[' . $host . ']';
+        if (false === strpos($address, '://')) {
+            $address = 'tcp://' . $address;
         }
-        return sprintf('tcp://%s:%s', $host, $port);
+
+        else if (0 === strpos($address, 'unix://')) {
+            $address = str_replace('unix://', 'file://', $address);
+            $isUnix = true;
+        }
+
+        $scheme = parse_url($address, PHP_URL_SCHEME);
+        $host = trim(parse_url($address, PHP_URL_HOST), '[]');
+        $port = parse_url($address, PHP_URL_PORT);
+        $path = parse_url($address, PHP_URL_PATH);
+
+        if (isset($isUnix)) {
+            $scheme = 'unix';
+        }
+
+        if (null === $host) {
+            $host = 'localhost';
+        }
+
+        return [
+            'scheme'  => $scheme,
+            'host'    => $host,
+            'port'    => $port,
+            'path'    => $path
+        ];
+    }
+
+    protected function joinSocketAddress($parts)
+    {
+        $address = $parts['scheme'] . '://';
+
+        // enclose IPv6 addresses in square brackets before appending port
+        if (strpos($parts['host'], ':') !== false) {
+            $parts['host'] = '[' . $parts['host'] . ']';
+        }
+
+        $address .= $parts['host'];
+
+        if ($parts['port']) {
+            $address .= ':' . $parts['port'];
+        }
+
+        $address .= $parts['path'];
+
+        return $address;
     }
 
     protected function resolveHostname($host)
