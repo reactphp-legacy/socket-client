@@ -37,6 +37,19 @@ class SecureConnectorTest extends TestCase
         $resolver = $dnsResolverFactory->createCached('8.8.8.8', $loop);
 
         $connector = new Connector($loop, $resolver);
+
+        // verify server is listening by creating an unencrypted connection once
+        $promise = $connector->create('127.0.0.1', 6001);
+        try {
+            $client = $this->waitFor($promise, $loop);
+            /* @var $client Stream */
+            $client->close();
+        } catch (\Exception $e) {
+            $this->markTestSkipped('stunnel not reachable?');
+        }
+
+        $this->assertEquals(0, $connected);
+
         $secureConnector = new SecureConnector($connector, $loop);
 
         $promise = $secureConnector->create('127.0.0.1', 6001);
@@ -76,12 +89,21 @@ class SecureConnectorTest extends TestCase
     private function waitFor(PromiseInterface $promise, LoopInterface $loop)
     {
         $ret = null;
-        $promise->then(function ($value) use (&$ret) {
-            $ret = $value;
-        });
+        $promise->then(
+            function ($value) use (&$ret) {
+                $ret = $value;
+            },
+            function ($error) use (&$ret) {
+                $ret = $error;
+            }
+        );
 
         while ($ret === null) {
             $loop->tick();
+        }
+
+        if ($ret instanceof \Exception) {
+            throw $ret;
         }
 
         return $ret;

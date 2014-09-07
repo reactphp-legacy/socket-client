@@ -12,6 +12,11 @@ matrix:
 
 before_script:
   - composer install --dev --prefer-source
+  - sudo apt-get install -y openssl stunnel
+  - openssl genrsa 1024 > stunnel.key
+  - openssl req -batch -subj '/CN=127.0.0.1' -new -x509 -nodes -sha1 -days 365 -key stunnel.key > stunnel.cert
+  - cat stunnel.key stunnel.cert > stunnel.pem
+  - sudo stunnel -f -p stunnel.pem -d 6001 -r 6000 &
 
 script:
-  - phpunit --coverage-text
+  - phpunit --coverage-text --verbose
