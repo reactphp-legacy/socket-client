@@ -15,6 +15,9 @@ class SecureConnectorTest extends TestCase
 {
     public function testA()
     {
+        // TODO: peer verification disabled for now so we can test our self-signed certificate
+        stream_context_set_default(array('ssl' => array('verify_peer' => false, 'verify_peer_name' => false)));
+
         $loop = LoopFactory::create();
 
         $receivedServer = '';
