@@ -12,12 +12,15 @@ class Connector implements ConnectorInterface
 {
     private $loop;
     private $resolver;
+    private $defaultConnectTimeout;
     private $peerNameCtxKey;
 
-    public function __construct(LoopInterface $loop, Resolver $resolver)
+    public function __construct(LoopInterface $loop, Resolver $resolver, $defaultConnectTimeout = 3)
     {
         $this->loop = $loop;
         $this->resolver = $resolver;
+        $this->defaultConnectTimeout = (int)$defaultConnectTimeout;
+
         $this->peerNameCtxKey = PHP_VERSION_ID < 50600 ? 'CN_match' : 'peer_name';
     }
 
@@ -89,24 +92,38 @@ class Connector implements ConnectorInterface
         stream_set_blocking($socket, 0);
 
         // wait for connection
+        $timeout = !empty($contextOpts['react_socket_client']['connect_timeout'])
+            ? abs((int)$contextOpts['react_socket_client']['connect_timeout'])
+            : $this->defaultConnectTimeout;
 
         return $this
-            ->waitForStreamOnce($socket)
+            ->waitForStreamOnce($socket, $timeout)
             ->then(array($this, 'checkConnectedSocket'))
             ->then(array($this, 'handleConnectedSocket'));
     }
 
-    protected function waitForStreamOnce($stream)
+    protected function waitForStreamOnce($stream, $timeout)
     {
         $deferred = new Deferred();
 
-        $loop = $this->loop;
+        $timer = $this->loop->addTimer($timeout, function () use ($stream, $deferred) {
+            $this->loop->removeReadStream($stream);
+            $this->loop->removeWriteStream($stream);
 
-        $this->loop->addWriteStream($stream, function ($stream) use ($loop, $deferred) {
-            $loop->removeWriteStream($stream);
+            $deferred->reject(new \RuntimeException("Connection timed out"));
+        });
+
+        $activityCallback = function ($stream) use ($timer, $deferred) {
+            $this->loop->cancelTimer($timer);
+
+            $this->loop->removeReadStream($stream);
+            $this->loop->removeWriteStream($stream);
 
             $deferred->resolve($stream);
-        });
+        };
+
+        $this->loop->addReadStream($stream, $activityCallback);
+        $this->loop->addWriteStream($stream, $activityCallback);
 
         return $deferred->promise();
     }
