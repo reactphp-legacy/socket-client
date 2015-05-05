@@ -41,6 +41,18 @@ class SecureStream extends Stream implements DuplexStreamInterface
         $this->resume();
     }
 
+    public function handleData($stream)
+    {
+        $data = fread($stream, $this->bufferSize);
+        $meta = stream_get_meta_data($stream);
+
+        $this->emit('data', [$data, $this]);
+
+        if (!is_resource($stream) || $meta['eof']) {
+            $this->end();
+        }
+    }
+
     public function pause()
     {
         $this->loop->removeReadStream($this->decorating->stream);
