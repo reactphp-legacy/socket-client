@@ -3,19 +3,19 @@
 namespace React\SocketClient;
 
 use React\EventLoop\LoopInterface;
-use React\Promise\Deferred;
+use React\Promise\CancellablePromiseInterface;
 
 trait TimeoutTrait
 {
-    protected function setTimeout(LoopInterface $loop, Deferred $defer, $seconds = 30)
+    protected function setTimeout(LoopInterface $loop, CancellablePromiseInterface $promise, $seconds = 30)
     {
         $seconds = (int)$seconds;
 
-        $timer = $loop->addTimer($seconds, function() use ($defer, $seconds) {
-            $defer->reject(new \RuntimeException("Timeout: failed to connected after {$seconds} seconds"));
+        $timer = $loop->addTimer($seconds, function() use ($promise, $seconds) {
+            $promise->cancel();
         });
 
-        $defer->promise()->then(function() use ($timer) {
+        $promise->then(function() use ($timer) {
             $timer->cancel();
         });
     }

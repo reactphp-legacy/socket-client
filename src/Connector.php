@@ -6,10 +6,11 @@ use React\EventLoop\LoopInterface;
 use React\Dns\Resolver\Resolver;
 use React\Stream\Stream;
 use React\Promise;
-use React\Promise\Deferred;
 
 class Connector implements ConnectorInterface
 {
+    use TimeoutTrait;
+
     private $loop;
     private $resolver;
 
@@ -28,7 +29,7 @@ class Connector implements ConnectorInterface
             });
     }
 
-    public function createSocketForAddress($address, $port)
+    public function createSocketForAddress($address, $port, $timeout = 30)
     {
         $url = $this->getSocketUrl($address, $port);
 
@@ -46,24 +47,35 @@ class Connector implements ConnectorInterface
         // wait for connection
 
         return $this
-            ->waitForStreamOnce($socket)
+            ->waitForStreamOnce($socket, (int)$timeout)
             ->then(array($this, 'checkConnectedSocket'))
             ->then(array($this, 'handleConnectedSocket'));
     }
 
-    protected function waitForStreamOnce($stream)
+    protected function waitForStreamOnce($stream, $timeout)
     {
-        $deferred = new Deferred();
+        $resolver = function(callable $resolve, callable $reject, callable $notify) use ($stream) {
+            $this->loop->addWriteStream($stream, function($stream) use ($resolve) {
+                $this->loop->removeWriteStream($stream);
 
-        $loop = $this->loop;
+                $resolve($stream);
+            });
+        };
 
-        $this->loop->addWriteStream($stream, function ($stream) use ($loop, $deferred) {
-            $loop->removeWriteStream($stream);
+        $canceller = function(callable $resonse, callable $reject, callable $progress) use ($stream, $timeout) {
+            $this->loop->removeWriteStream($stream);
 
-            $deferred->resolve($stream);
-        });
+            stream_socket_shutdown($stream, STREAM_SHUT_RDWR);
+            fclose($stream);
 
-        return $deferred->promise();
+            $reject(new \RuntimeException("Timeout: failed to connect after {$timeout} seconds"));
+        };
+
+        $promise = new Promise\Promise($resolver, $canceller);
+
+        $this->setTimeout($this->loop, $promise, $timeout);
+
+        return $promise;
     }
 
     public function checkConnectedSocket($socket)
