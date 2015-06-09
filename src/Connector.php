@@ -10,6 +10,8 @@ use React\Promise\Deferred;
 
 class Connector implements ConnectorInterface
 {
+    const MAX_CONNECTION_TIME = 5;
+    
     private $loop;
     private $resolver;
 
@@ -65,6 +67,10 @@ class Connector implements ConnectorInterface
         $deferred = new Deferred();
 
         $loop = $this->loop;
+        
+        $loop->addTimer(self::MAX_CONNECTION_TIME, function() use($deferred){
+            $deferred->reject(new ConnectionException('Connection timed out'));
+        });
 
         $this->loop->addWriteStream($stream, function ($stream) use ($loop, $deferred) {
             $loop->removeWriteStream($stream);
