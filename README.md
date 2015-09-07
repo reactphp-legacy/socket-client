@@ -67,6 +67,18 @@ $secureConnector->create('www.google.com', 443)->then(function (React\Stream\Str
 $loop->run();
 ```
 
+The `withContext(array $context)` method can be used to return a
+new `SecureConnector` instance with the given
+[additional TLS/SSL context options](http://php.net/manual/en/context.ssl.php) applied.
+For example, this can be used to disable peer verification in a trusted network:
+ 
+```php
+$secureConnector->withContext(array(
+    'verify_peer' => false,
+    'verify_peer_name' => false,
+))->create('intranet.example.com', 443)->then($callback);
+```
+
 ### Unix domain sockets
 
 Similarly, the `UnixConnector` class can be used to connect to Unix domain socket (UDS)
