@@ -9,6 +9,7 @@ class SecureConnector implements ConnectorInterface
 {
     private $connector;
     private $streamEncryption;
+    private $context = array();
 
     public function __construct(ConnectorInterface $connector, LoopInterface $loop)
     {
@@ -16,16 +17,37 @@ class SecureConnector implements ConnectorInterface
         $this->streamEncryption = new StreamEncryption($loop);
     }
 
+    /**
+     * sets additional context options (for SSL context wrapper)
+     *
+     * @param array $sslContextOptions assosiative array of additional context options
+     * @return self returns a new instance with the additional context options applied
+     * @link http://php.net/manual/en/context.ssl.php
+     */
+    public function withContext(array $sslContextOptions)
+    {
+        $connector = clone $this;
+        $connector->context = array_filter($sslContextOptions + $connector->context, function ($value) {
+            return ($value !== null);
+        });
+
+        return $connector;
+    }
+
     public function create($host, $port)
     {
-        return $this->connector->create($host, $port)->then(function (Stream $stream) use ($host) {
+        // merge explicit context options with default context
+        $context = $this->context + array(
+            'SNI_enabled' => true,
+            'SNI_server_name' => $host,
+            'peer_name' => $host
+        );
+
+        return $this->connector->create($host, $port)->then(function (Stream $stream) use ($context) {
             // (unencrypted) TCP/IP connection succeeded
 
             // set required SSL/TLS context options
-            $resource = $stream->stream;
-            stream_context_set_option($resource, 'ssl', 'SNI_enabled', true);
-            stream_context_set_option($resource, 'ssl', 'SNI_server_name', $host);
-            stream_context_set_option($resource, 'ssl', 'peer_name', $host);
+            stream_context_set_option($stream->stream, array('ssl' => $context));
 
             // try to enable encryption
             return $this->streamEncryption->enable($stream)->then(null, function ($error) use ($stream) {
