@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.5 (2016-03-27)
+
+This is a compatibility release that backports some changes from the v0.5
+release branch. You should consider upgrading to the v0.5 release.
+
+* Fix: PHP 5.6+ uses new SSL/TLS context options backported (#65 by @clue)
+* Fix: Move SSL/TLS context options to SecureConnector (#43 by @clue)
+
 ## 0.4.4 (2015-09-23)
 
 * Feature: Add support for Unix domain sockets (UDS) (#41 by @clue)
