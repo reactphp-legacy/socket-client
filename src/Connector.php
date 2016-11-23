@@ -33,7 +33,7 @@ class Connector implements ConnectorInterface
         $url = $this->getSocketUrl($address, $port);
 
         $flags = STREAM_CLIENT_CONNECT | STREAM_CLIENT_ASYNC_CONNECT;
-        $socket = stream_socket_client($url, $errno, $errstr, 0, $flags);
+        $socket = stream_socket_client($url, $errno, $errstr, 0, $flags, stream_context_create());
 
         if (!$socket) {
             return Promise\reject(new \RuntimeException(
