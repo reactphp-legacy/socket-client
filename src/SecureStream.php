@@ -43,11 +43,12 @@ class SecureStream extends Stream
 
     public function handleData($stream)
     {
-        $data = stream_get_contents($stream);
+        $data = fread($stream, $this->bufferSize);
+        $meta = stream_get_meta_data($stream);
 
         $this->emit('data', array($data, $this));
 
-        if (!is_resource($stream) || feof($stream)) {
+        if (!is_resource($stream) || $meta['eof']) {
             $this->end();
         }
     }
