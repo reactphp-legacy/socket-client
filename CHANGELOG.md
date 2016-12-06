@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.6 (2016-12-06)
+
+This is a bugfix release that resolves an issue introduced in the v0.4.5 release.
+You should consider upgrading to the v0.5 release.
+
+* Fix: Always create empty stream context to prevent race condition leading to
+  CN mismatch on TLS enabled connections (#73 by @WyriHaximus)
+
 ## 0.4.5 (2016-03-27)
 
 This is a compatibility release that backports some changes from the v0.5
