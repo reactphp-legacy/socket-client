@@ -67,6 +67,14 @@ $secureConnector->create('www.google.com', 443)->then(function (React\Stream\Str
 $loop->run();
 ```
 
+> Advanced usage: Internally, the `SecureConnector` has to set the required
+*context options* on the underlying stream resource.
+It should therefor be used with a `Connector` somewhere in the connector
+stack so that it can allocate an empty *context* resource for each stream
+resource.
+Failing to do so may result in some hard to trace race conditions, because all
+stream resources will use a single, shared *default context* resource otherwise.
+
 ### Unix domain sockets
 
 Similarly, the `UnixConnector` class can be used to connect to Unix domain socket (UDS)
