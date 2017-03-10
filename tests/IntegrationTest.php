@@ -63,6 +63,37 @@ class IntegrationTest extends TestCase
     }
 
     /** @test */
+    public function gettingEncryptedStuffFromHostWithSniShouldWork()
+    {
+        if (defined('HHVM_VERSION')) {
+            $this->markTestSkipped('Not supported on HHVM');
+        }
+
+        $loop = new StreamSelectLoop();
+
+        $factory = new Factory();
+        $dns = $factory->create('8.8.8.8', $loop);
+
+        $connected = false;
+        $response = null;
+
+        $secureConnector = new SecureConnector(
+            new Connector($loop, $dns),
+            $loop
+        );
+
+        $conn = Block\await($secureConnector->create('reactphp.sni.velox.ch', 443), $loop);
+
+        $conn->write("GET / HTTP/1.0\r\nHost: reactphp.sni.velox.ch\r\n\r\n");
+
+        $response = Block\await(BufferedSink::createPromise($conn), $loop);
+
+        $this->assertRegExp('#^HTTP/1\.[01] 2\d\d#', $response);
+        $this->assertRegExp('#<strong>reactphp\.sni\.velox\.ch</strong>#', $response);
+        $this->assertRegExp('#<strong>CN=\*\.sni\.velox\.ch</strong>#', $response);
+    }
+
+    /** @test */
     public function testSelfSignedRejectsIfVerificationIsEnabled()
     {
         if (!function_exists('stream_socket_enable_crypto')) {
