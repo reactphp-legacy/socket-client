@@ -1,4 +1,41 @@
-# SocketClient Component
+# Maintenance Mode
+
+This component has now been merged into the
+[Socket component](https://github.com/reactphp/socket) and only exists for BC
+reasons.
+
+```bash
+$ composer require react/socket
+```
+
+If you've previously used the SocketClient component to establish outgoing
+client connections, upgrading should take no longer than a few minutes.
+All classes have been merged as-is from the latest `v0.7.0` release with no
+other changes, so you can simply update your code to use the updated namespace
+like this:
+
+```php
+// old from SocketClient component and namespace
+$connector = new React\SocketClient\Connector($loop);
+$connector->connect('google.com:80')->then(function (ConnectionInterface $conn) {
+    $connection->write('…');
+});
+
+// new
+$connector = new React\Socket\Connector($loop);
+$connector->connect('google.com:80')->then(function (ConnectionInterface $conn) {
+    $connection->write('…');
+});
+```
+
+See https://github.com/reactphp/socket for more details.
+
+The below documentation applies to the last release of this component.
+Further development will take place in the updated
+[Socket component](https://github.com/reactphp/socket), so you're highly
+recommended to upgrade as soon as possible.
+
+# Legacy SocketClient Component
 
 [![Build Status](https://secure.travis-ci.org/reactphp/socket-client.png?branch=master)](http://travis-ci.org/reactphp/socket-client) [![Code Climate](https://codeclimate.com/github/reactphp/socket-client/badges/gpa.svg)](https://codeclimate.com/github/reactphp/socket-client)
 
