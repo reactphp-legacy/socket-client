@@ -39,6 +39,11 @@ recommended to upgrade as soon as possible.
 
 [![Build Status](https://secure.travis-ci.org/reactphp/socket-client.png?branch=master)](http://travis-ci.org/reactphp/socket-client) [![Code Climate](https://codeclimate.com/github/reactphp/socket-client/badges/gpa.svg)](https://codeclimate.com/github/reactphp/socket-client)
 
+For previous versions, please see related documentation:
+
+| [0.3.x](https://github.com/reactphp/socket-client/blob/0.3/README.md) | [0.4.x](https://github.com/reactphp/socket-client/blob/0.4/README.md) | [0.5.x](https://github.com/reactphp/socket-client/blob/0.5/README.md) | [0.6.x](https://github.com/reactphp/socket-client/blob/master/README.md) |
+|---|---|---|---|
+
 Async, streaming plaintext TCP/IP and secure TLS based connections for [ReactPHP](https://reactphp.org/)
 
 You can think of this library as an async version of
